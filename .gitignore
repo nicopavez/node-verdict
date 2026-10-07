@@ -4,3 +4,12 @@ __pycache__/
 .venv/
 build/
 dist/
+
+# Personal, never for the public repo
+interview_script.md
+interview-prep.md
+qa-prep.md
+walkthrough_audio.*
+.env
+.DS_Store
+HANDOFF.md
