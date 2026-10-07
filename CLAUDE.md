@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-A portfolio project for a Senior PM interview (data plane at a GPU cloud). Node Verdict decides whether a GPU training slowdown is the node's fault or the job's fault, before anything gets replaced. It is a verdict engine, a policy layer and a simulator, run on real ByteDance sample traces plus labeled synthetic node history. It defines behavior. It does not operate hardware.
+A product design project about the data plane of a GPU cloud. Node Verdict decides whether a GPU training slowdown is the node's fault or the job's fault, before anything gets replaced. It is a verdict engine, a policy layer and a simulator, run on real ByteDance sample traces plus labeled synthetic node history. It defines behavior. It does not operate hardware.
 
 ## Commands
 
