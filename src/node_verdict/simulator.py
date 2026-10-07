@@ -159,6 +159,20 @@ def simulate_peer_aware(
     return _finish(result, scenario, params, changed, at_ckpt=True)
 
 
+def owner_by_job(conditions) -> dict[str, str]:
+    """Who the verdicts say owns each job's slowdown. A timing claim against a node wins over a stage verdict.
+
+    SDCSuspect is not a timing claim, so it does not name an owner for the slowdown.
+    """
+    out: dict[str, str] = {}
+    for c in conditions:
+        if c.reason in (ReasonCode.NODE_LEMON, ReasonCode.NODE_SUSPECT):
+            out[c.job] = "node"
+        elif c.reason == ReasonCode.WORKLOAD_IMBALANCE:
+            out.setdefault(c.job, "job")
+    return out
+
+
 def simulate_attributed(
     scenario: Scenario,
     params: SimParams = SimParams(),
@@ -169,11 +183,7 @@ def simulate_attributed(
     conditions = run_engine(scenario, cfg)
     sizes = {j.id: len(j.nodes) for j in scenario.jobs}
     actions = plan(conditions, len(scenario.pool), scenario.spares, sizes, policy_cfg)
-    for c in conditions:
-        if c.reason in (ReasonCode.NODE_LEMON, ReasonCode.NODE_SUSPECT):
-            result.owner_by_job[c.job] = "node"  # a timing claim against a node
-        elif c.reason == ReasonCode.WORKLOAD_IMBALANCE:
-            result.owner_by_job.setdefault(c.job, "job")
+    result.owner_by_job = owner_by_job(conditions)
     changed: dict[str, list[str]] = {}
     for a in actions:
         if a.kind in NODE_CHANGING and a.status == "planned":
