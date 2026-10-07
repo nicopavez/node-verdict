@@ -1,0 +1,27 @@
+{
+  "job_meta": {
+    "trial_name": "AR",
+    "run_id": 0,
+    "dp_size": 4,
+    "pp_size": 4,
+    "tp_size": 4,
+    "dsp_size": 1,
+    "vpp_size": 1,
+    "world_size": 64
+  },
+  "mean_step_time_s": 46.6492,
+  "mean_ideal_step_time_s": 23.4847,
+  "blocking_slowdown": 1.9730450967262543,
+  "blocking_decompose_by_dp_rank": {
+    "0": 1.9730444100764113,
+    "2": 1.0111514645495234,
+    "3": 1.0111429488597723,
+    "1": 1.0108912860378452
+  },
+  "blocking_decompose_by_stage": {
+    "0": 1.9791886375936654,
+    "3": 1.0023690791892135,
+    "1": 0.9971124940932459,
+    "2": 0.9956041132082933
+  }
+}

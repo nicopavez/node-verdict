@@ -1,0 +1,11 @@
+job    node  verdict            owner  confidence  why
+-----  ----  -----------------  -----  ----------  --------------------------------------------------------------------------------------------------
+job-a  N00   NodeSuspect        node   low         Slow against its peers in this job. One job cannot separate the node from its position.
+job-b  N22   WorkloadImbalance  job    high        Slowdown follows pipeline stage 3, not this node (stage partitioning).
+job-b  N23   WorkloadImbalance  job    high        Slowdown follows pipeline stage 3, not this node (stage partitioning).
+job-c  N28   WorkloadImbalance  job    medium      Slowdown follows pipeline stage 1, not this node (stage partitioning and uneven sequence lengths).
+job-c  N29   WorkloadImbalance  job    medium      Slowdown follows pipeline stage 1, not this node (stage partitioning and uneven sequence lengths).
+job-c  N30   WorkloadImbalance  job    medium      Slowdown follows pipeline stage 1, not this node (stage partitioning and uneven sequence lengths).
+job-c  N31   WorkloadImbalance  job    medium      Slowdown follows pipeline stage 1, not this node (stage partitioning and uneven sequence lengths).
+
+7 nodes have a verdict. 25 nodes have none (no condition is not the same as healthy).

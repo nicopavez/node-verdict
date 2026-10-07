@@ -1,0 +1,225 @@
+[
+  {
+    "apiVersion": "nodeverdict.dev/v1alpha1",
+    "node": "N00",
+    "job": "job-a",
+    "condition": {
+      "type": "NodeVerdict",
+      "status": "True",
+      "reason": "NodeLemon",
+      "message": "Slowdown follows this node across different jobs.",
+      "lastTransitionTime": "2026-10-06T00:00:00Z",
+      "attributedTo": "node",
+      "confidence": "high",
+      "evidence": [
+        {
+          "signal": "peer_ratio",
+          "value": "2.35",
+          "note": "median compute vs same-stage peers"
+        },
+        {
+          "signal": "persistence",
+          "value": "1.00",
+          "note": "share of steps above threshold"
+        },
+        {
+          "signal": "elevated_jobs",
+          "value": "5",
+          "note": "distinct jobs where it was the outlier"
+        },
+        {
+          "signal": "lemon_score",
+          "value": "10.00",
+          "note": "weighted history signals"
+        }
+      ]
+    }
+  },
+  {
+    "apiVersion": "nodeverdict.dev/v1alpha1",
+    "node": "N22",
+    "job": "job-b",
+    "condition": {
+      "type": "NodeVerdict",
+      "status": "True",
+      "reason": "WorkloadImbalance",
+      "message": "Slowdown follows pipeline stage 3, not this node (stage partitioning).",
+      "lastTransitionTime": "2026-10-06T00:00:00Z",
+      "attributedTo": "job",
+      "confidence": "high",
+      "evidence": [
+        {
+          "signal": "stage_ratio",
+          "value": "1.63",
+          "note": "stage 3 median compute vs job median"
+        },
+        {
+          "signal": "peer_ratio",
+          "value": "1.00",
+          "note": "this rank matches its stage peers"
+        }
+      ]
+    }
+  },
+  {
+    "apiVersion": "nodeverdict.dev/v1alpha1",
+    "node": "N23",
+    "job": "job-b",
+    "condition": {
+      "type": "NodeVerdict",
+      "status": "True",
+      "reason": "WorkloadImbalance",
+      "message": "Slowdown follows pipeline stage 3, not this node (stage partitioning).",
+      "lastTransitionTime": "2026-10-06T00:00:00Z",
+      "attributedTo": "job",
+      "confidence": "high",
+      "evidence": [
+        {
+          "signal": "stage_ratio",
+          "value": "1.63",
+          "note": "stage 3 median compute vs job median"
+        },
+        {
+          "signal": "peer_ratio",
+          "value": "1.00",
+          "note": "this rank matches its stage peers"
+        }
+      ]
+    }
+  },
+  {
+    "apiVersion": "nodeverdict.dev/v1alpha1",
+    "node": "N27",
+    "job": "job-c",
+    "condition": {
+      "type": "NodeVerdict",
+      "status": "True",
+      "reason": "SDCSuspect",
+      "message": "Training anomalies follow this node across jobs while idle checks pass.",
+      "lastTransitionTime": "2026-10-06T00:00:00Z",
+      "attributedTo": "node",
+      "confidence": "high",
+      "evidence": [
+        {
+          "signal": "anomaly_jobs",
+          "value": "4",
+          "note": "distinct jobs with loss or gradient anomalies"
+        },
+        {
+          "signal": "active_check_pass_rate",
+          "value": "1.00",
+          "note": "idle-node checks passed, so they do not explain it"
+        },
+        {
+          "signal": "peer_ratio",
+          "value": "1.00",
+          "note": "timing is normal, so this is not a straggler"
+        }
+      ]
+    }
+  },
+  {
+    "apiVersion": "nodeverdict.dev/v1alpha1",
+    "node": "N28",
+    "job": "job-c",
+    "condition": {
+      "type": "NodeVerdict",
+      "status": "True",
+      "reason": "WorkloadImbalance",
+      "message": "Slowdown follows pipeline stage 1, not this node (stage partitioning and uneven sequence lengths).",
+      "lastTransitionTime": "2026-10-06T00:00:00Z",
+      "attributedTo": "job",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "signal": "stage_ratio",
+          "value": "1.20",
+          "note": "stage 1 median compute vs job median"
+        },
+        {
+          "signal": "peer_ratio",
+          "value": "1.00",
+          "note": "this rank matches its stage peers"
+        }
+      ]
+    }
+  },
+  {
+    "apiVersion": "nodeverdict.dev/v1alpha1",
+    "node": "N29",
+    "job": "job-c",
+    "condition": {
+      "type": "NodeVerdict",
+      "status": "True",
+      "reason": "WorkloadImbalance",
+      "message": "Slowdown follows pipeline stage 1, not this node (stage partitioning and uneven sequence lengths).",
+      "lastTransitionTime": "2026-10-06T00:00:00Z",
+      "attributedTo": "job",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "signal": "stage_ratio",
+          "value": "1.20",
+          "note": "stage 1 median compute vs job median"
+        },
+        {
+          "signal": "peer_ratio",
+          "value": "1.00",
+          "note": "this rank matches its stage peers"
+        }
+      ]
+    }
+  },
+  {
+    "apiVersion": "nodeverdict.dev/v1alpha1",
+    "node": "N30",
+    "job": "job-c",
+    "condition": {
+      "type": "NodeVerdict",
+      "status": "True",
+      "reason": "WorkloadImbalance",
+      "message": "Slowdown follows pipeline stage 1, not this node (stage partitioning and uneven sequence lengths).",
+      "lastTransitionTime": "2026-10-06T00:00:00Z",
+      "attributedTo": "job",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "signal": "stage_ratio",
+          "value": "1.20",
+          "note": "stage 1 median compute vs job median"
+        },
+        {
+          "signal": "peer_ratio",
+          "value": "1.00",
+          "note": "this rank matches its stage peers"
+        }
+      ]
+    }
+  },
+  {
+    "apiVersion": "nodeverdict.dev/v1alpha1",
+    "node": "N31",
+    "job": "job-c",
+    "condition": {
+      "type": "NodeVerdict",
+      "status": "True",
+      "reason": "WorkloadImbalance",
+      "message": "Slowdown follows pipeline stage 1, not this node (stage partitioning and uneven sequence lengths).",
+      "lastTransitionTime": "2026-10-06T00:00:00Z",
+      "attributedTo": "job",
+      "confidence": "medium",
+      "evidence": [
+        {
+          "signal": "stage_ratio",
+          "value": "1.20",
+          "note": "stage 1 median compute vs job median"
+        },
+        {
+          "signal": "peer_ratio",
+          "value": "1.00",
+          "note": "this rank matches its stage peers"
+        }
+      ]
+    }
+  }
+]

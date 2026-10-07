@@ -1,0 +1,25 @@
+{
+  "job_meta": {
+    "trial_name": "ST",
+    "run_id": 0,
+    "dp_size": 2,
+    "pp_size": 4,
+    "tp_size": 1,
+    "dsp_size": 1,
+    "vpp_size": 1,
+    "world_size": 8
+  },
+  "mean_step_time_s": 2.2144,
+  "mean_ideal_step_time_s": 1.8433,
+  "blocking_slowdown": 1.1787021836556841,
+  "blocking_decompose_by_dp_rank": {
+    "1": 1.1778704237064905,
+    "0": 1.1730828198099532
+  },
+  "blocking_decompose_by_stage": {
+    "3": 1.2322559543157936,
+    "0": 0.9980450635272368,
+    "1": 0.9830562530894704,
+    "2": 0.9824931309511952
+  }
+}

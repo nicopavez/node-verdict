@@ -1,0 +1,18 @@
+Node Verdict
+Copyright (c) 2026 Nicholas Pavez
+
+The tables in data/derived/ are derived from the sample traces and what-if
+results in "StragglerAnalysis", the artifact for the paper "Understanding
+Stragglers in Large Model Training Using What-if Analysis" (ByteDance Seed,
+OSDI 2025).
+
+  Source:  https://github.com/ByteDance-Seed/StragglerAnalysis
+  License: Apache License 2.0 (copy in LICENSES/Apache-2.0.txt)
+
+Changes made: per-operation trace rows were summed into per-rank, per-step
+compute times and a forward-versus-backward correlation. Trace SE was reduced
+to the first four data-parallel replicas of each pipeline stage. The what-if
+result files were trimmed to the slowdown fields this project uses. The
+conversion script is scripts/prepare_traces.py.
+
+This project is not affiliated with or endorsed by ByteDance.

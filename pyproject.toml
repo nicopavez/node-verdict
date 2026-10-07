@@ -1,0 +1,25 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "node-verdict"
+version = "0.1.0"
+description = "Decide whether a GPU training slowdown is the node's fault or the job's fault, before anything gets replaced."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { text = "MIT" }
+dependencies = ["numpy>=1.26", "pandas>=2.1"]
+
+[project.optional-dependencies]
+dev = ["pytest>=8"]
+prepare = ["pyarrow>=15"]
+
+[project.scripts]
+node-verdict = "node_verdict.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
