@@ -1,0 +1,24 @@
+Each threshold swept on its own, the rest at defaults. A band is where every verdict matches the default run.
+
+threshold        default  verdicts unchanged  range tested  tested against
+---------------  -------  ------------------  ------------  -----------------
+peer_threshold   1.15     1.02 to 2.32        1.02 to 2.50  real timing
+persistence_min  0.80     0.05 to 1.00        0.05 to 1.00  real timing
+stage_threshold  1.15     1.06 to 1.20        1.00 to 1.80  real timing
+lemon_min_score  4        1 to 10             1 to 12       synthetic history
+lemon_min_jobs   2        1 to 5              1 to 6        synthetic history
+sdc_min_jobs     2        1 to 4              1 to 6        synthetic history
+
+Just outside each band:
+
+peer_threshold above 2.32: N00 loses NodeLemon.
+stage_threshold below 1.06: N12 to N15 gain WorkloadImbalance.
+stage_threshold above 1.20: N28 to N31 lose WorkloadImbalance.
+lemon_min_score above 10: N00 NodeLemon to NodeSuspect.
+lemon_min_jobs above 5: N00 NodeLemon to NodeSuspect.
+sdc_min_jobs above 4: N27 loses SDCSuspect.
+
+Healthy nodes that would be replaced or pulled at any setting tested: 0.
+
+A wide band means the demo is not on a knife edge. It does not validate the thresholds for a real fleet.
+The planted slow worker runs 2.35x its peers, so any peer threshold below that catches it. Bands on synthetic history only show the planted history is not borderline.

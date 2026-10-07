@@ -72,6 +72,7 @@ python -m node_verdict verdicts    # verdict table
 python -m node_verdict verdicts --json            # node conditions as JSON
 python -m node_verdict verdicts --no-history      # what changes without cross-job history
 python -m node_verdict simulate --sensitivity
+python -m node_verdict robustness        # where each threshold flips a verdict
 pytest
 ```
 
@@ -189,6 +190,25 @@ every 200 steps      +9.2 pts  +0.2 pts             -0.2 pts
 - What attribution adds over a good detector does not depend on my assumptions. It pulls the corrupting chip, which timing alone cannot see. It gives every slow job an owner (3 of 3, against 1 of 3), so the two customers whose jobs are the problem are told so. And it will not replace a node on one job of evidence (see the no-history run, where N00 drops to `Watch`).
 - In a supply-limited cloud, spares are the constraint. Attribution spends one more spare than peer-aware, on purpose, to pull a chip that would otherwise keep corrupting training runs.
 
+## How fragile are the thresholds?
+
+I set the thresholds by hand on three traces, and the public artifact has no held-out data. So I checked the next best thing: sweep each threshold on its own and find the band where every verdict stays the same (`python -m node_verdict robustness`).
+
+```
+threshold        default  verdicts unchanged  range tested  tested against
+---------------  -------  ------------------  ------------  -----------------
+peer_threshold   1.15     1.02 to 2.32        1.02 to 2.50  real timing
+persistence_min  0.80     0.05 to 1.00        0.05 to 1.00  real timing
+stage_threshold  1.15     1.06 to 1.20        1.00 to 1.80  real timing
+lemon_min_score  4        1 to 10             1 to 12       synthetic history
+lemon_min_jobs   2        1 to 5              1 to 6        synthetic history
+sdc_min_jobs     2        1 to 4              1 to 6        synthetic history
+```
+
+The stage threshold is the one that matters. Below 1.06, job-a's last stage (1.04x the job median) gets blamed on the customer's job. Above 1.20, job-c's slow stage (1.20x) is no longer explained. Both failures are safe: neither changes a node. At no setting tested does a healthy node get replaced or pulled.
+
+This does not validate the thresholds for a real fleet. The peer threshold looks robust only because the planted slow worker runs 2.35x its peers. A degraded node in production may run 1.1x, which is where this threshold would actually be tested. The bands on history only show that the planted history is not borderline.
+
 ## Data: real and synthetic
 
 | Input | Status |
@@ -203,7 +223,7 @@ every 200 steps      +9.2 pts  +0.2 pts             -0.2 pts
 
 ## Limits
 
-1. **Three traces.** I set the thresholds by hand and checked them on these three jobs only. They are not validated on held-out data. Treat them as starting points.
+1. **Three traces.** I set the thresholds by hand and checked them on these three jobs only. They are not validated on held-out data. The robustness sweep shows they are not on a knife edge, not that they are right. Treat them as starting points.
 2. **History is synthetic.** The signal types follow what Meta reports (jobs that excluded a node, repair tickets, multi-node failures). The weights are illustrative. This is not Meta's model.
 3. **The data may not carry over.** ByteDance ran a dedicated cluster with plenty of network capacity. A shared cloud may see more node problems than workload problems.
 4. **Monitoring costs something.** I did not measure overhead. AWS found its own health agent slowed training jobs. I treat under 1% as a budget (ByteDance reports 0.86% for online corruption detection). That is a target here, not a result.
@@ -231,7 +251,8 @@ src/node_verdict/
   conditions.py    node conditions and the reason-code contract
   policy.py        actions and guards
   scenario.py      the 32-node demo pool
-  simulator.py     naive vs attributed
+  simulator.py     naive, peer-aware and attributed repair
+  robustness.py    threshold sweep
 data/derived/      small tables derived from the ByteDance traces
 scripts/           rebuild the derived tables
 tests/             unit and scenario tests, including the pinned reason codes

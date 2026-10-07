@@ -9,7 +9,15 @@ from . import __version__
 from .attribution import AttributionConfig
 from .engine import run_engine
 from .policy import PolicyConfig, plan
-from .report import action_table, comparison_table, sensitivity_table, verdict_table
+from .report import (
+    action_table,
+    comparison_table,
+    robustness_edges,
+    robustness_table,
+    sensitivity_table,
+    verdict_table,
+)
+from .robustness import all_bands, healthy_nodes_ever_changed
 from .scenario import BAD_NODE, DEFAULT_SPARES, SDC_NODE, build_scenario
 from .simulator import SimParams, compare, sensitivity
 
@@ -37,6 +45,20 @@ def cmd_simulate(args) -> None:
     if args.sensitivity:
         print("\nGoodput gain of attributed repair, in percentage points:\n")
         print(sensitivity_table(sensitivity(scenario, restart_steps=args.restart)))
+
+
+def cmd_robustness(args) -> None:
+    bands = all_bands()
+    print("Each threshold swept on its own, the rest at defaults. A band is where every verdict matches the default run.\n")
+    print(robustness_table(bands))
+    print("\nJust outside each band:\n")
+    print(robustness_edges(bands))
+    changed = healthy_nodes_ever_changed()
+    worst = sum(len(v) for v in changed.values())
+    print(f"\nHealthy nodes that would be replaced or pulled at any setting tested: {worst}.")
+    print("\nA wide band means the demo is not on a knife edge. It does not validate the thresholds for a real fleet.")
+    print("The planted slow worker runs 2.35x its peers, so any peer threshold below that catches it. "
+          "Bands on synthetic history only show the planted history is not borderline.")
 
 
 def cmd_demo(args) -> None:
@@ -98,6 +120,9 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--act-at", type=float, default=0.20)
     p.add_argument("--sensitivity", action="store_true")
     p.set_defaults(func=cmd_simulate)
+
+    p = sub.add_parser("robustness", help="sweep each threshold and show where verdicts change")
+    p.set_defaults(func=cmd_robustness)
 
     args = parser.parse_args(argv)
     args.func(args)

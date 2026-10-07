@@ -14,6 +14,7 @@ pytest -q
 python -m node_verdict demo
 python -m node_verdict verdicts            # add --json, or --no-history
 python -m node_verdict simulate --sensitivity
+python -m node_verdict robustness         # threshold sweep
 
 # Rebuild data/derived/ from ByteDance's artifact (needs pyarrow)
 git clone https://github.com/ByteDance-Seed/StragglerAnalysis <somewhere>
@@ -33,6 +34,7 @@ Evidence goes in, a verdict comes out, policy turns the verdict into an action.
 - `conditions.py`: Kubernetes-style node conditions. The four reason codes are a pinned API.
 - `policy.py`: actions are editable config. A fleet cap and a correlation guard sit on top.
 - `scenario.py`: the 32-node demo. Real timing, synthetic node history.
+- `robustness.py`: sweeps each threshold and reports where verdicts change.
 - `simulator.py`: compares naive, naive+checkpoint, peer-aware, and attributed repair.
 
 Things that are easy to get wrong:

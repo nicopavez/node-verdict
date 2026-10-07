@@ -50,6 +50,24 @@ def comparison_table(results: list[PolicyResult], scenario: Scenario) -> str:
     return table(["metric"] + [r.name for r in results], rows)
 
 
+def robustness_table(bands) -> str:
+    rows = [
+        [b.param, b.fmt(b.default), f"{b.fmt(b.low)} to {b.fmt(b.high)}", f"{b.fmt(b.grid_min)} to {b.fmt(b.grid_max)}", b.basis]
+        for b in bands
+    ]
+    return table(["threshold", "default", "verdicts unchanged", "range tested", "tested against"], rows)
+
+
+def robustness_edges(bands) -> str:
+    lines = []
+    for b in bands:
+        if b.below:
+            lines.append(f"{b.param} below {b.fmt(b.low)}: {b.below}.")
+        if b.above:
+            lines.append(f"{b.param} above {b.fmt(b.high)}: {b.above}.")
+    return "\n".join(lines)
+
+
 def sensitivity_table(rows: list[tuple[int, float, float, float]]) -> str:
     body = [[f"every {c} steps", f"{a:+.1f} pts", f"{b:+.1f} pts", f"{c2:+.1f} pts"] for c, a, b, c2 in rows]
     return table(["checkpoint interval", "vs naive", "vs naive+checkpoint", "vs peer-aware"], body)
