@@ -60,6 +60,7 @@ Actions are editable config in `PolicyConfig`. Two guards:
 | No condition when there is no evidence | Report `Healthy` | Absent is not healthy |
 | Four reason codes, pinned by a test | Free-text reasons | Customers automate on these. Renames are breaking changes |
 | Replace at a checkpoint | Replace immediately | Avoids losing work. Any policy can adopt it, so the simulator controls for it |
+| Compare against a peer-aware baseline | Compare only against naive | Naive flags whole slow stages, so beating it proves little. Peer-aware detection is what a good straggler tool already does. Attribution has to show what it adds beyond that: the chip, an owner for every slow job, and no replacement on one job of evidence |
 | Drop a rule that flagged single ranks slow in a few steps | Tune its threshold | The ranks sat at 5 to 14% against a 10% cutoff. That is noise, and tuning it to three traces would be overfitting |
 
 ## What I would build next

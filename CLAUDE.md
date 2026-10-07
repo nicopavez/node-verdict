@@ -33,14 +33,14 @@ Evidence goes in, a verdict comes out, policy turns the verdict into an action.
 - `conditions.py`: Kubernetes-style node conditions. The four reason codes are a pinned API.
 - `policy.py`: actions are editable config. A fleet cap and a correlation guard sit on top.
 - `scenario.py`: the 32-node demo. Real timing, synthetic node history.
-- `simulator.py`: compares naive, naive+checkpoint, and attributed repair.
+- `simulator.py`: compares naive, naive+checkpoint, peer-aware, and attributed repair.
 
 Things that are easy to get wrong:
 
 - **Absent is not healthy.** A node with no matching rule gets no condition. Do not add a "Healthy" verdict.
 - **Reason codes are a contract.** `tests/test_conditions.py` pins `NodeLemon`, `NodeSuspect`, `SDCSuspect`, `WorkloadImbalance`. A rename needs a new API version, not a quiet edit.
 - **A workload verdict never changes a node.** `ATTRIBUTED_TO` in `conditions.py` and the action map in `policy.py` enforce it.
-- **Keep the `naive+checkpoint` control.** Most of the goodput gain is checkpoint timing, which any policy can do. Removing the control would overstate what attribution adds.
+- **Keep the `naive+checkpoint` and `peer-aware` controls.** Most of the goodput gain is checkpoint timing and stage-peer comparison, which a good detector can do. Attribution scores slightly below peer-aware on goodput. Removing either control would overstate what attribution adds.
 - **Counts do not depend on assumed parameters.** Healthy nodes replaced, spares used and the chip caught are independent of checkpoint interval and restart cost. Goodput is not. Keep that distinction in anything you write.
 - **Do not tune thresholds to the three traces.** An earlier rule was deleted because tuning it would have been overfitting. Add robustness checks instead.
 - **Real vs synthetic.** Real: per-rank compute time and the what-if slowdowns from ByteDance's traces. Synthetic: rank-to-node mapping, node history, the anomaly stream. Say which, every time.
