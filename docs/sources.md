@@ -19,6 +19,7 @@ Every number and product claim in the README, checked against its source on 2026
 | Synthetic benchmarks miss over 60% of defective GPUs | ByteDance, "SDCs in the Wild", OSDI 2026 | Standard practice relies on synthetic microbenchmarks, which "miss over 60% of defective devices." | Correct. |
 | 0.86% overhead for online corruption detection | ByteDance, AEGIS, OSDI 2026 | "13 faulty GPUs while incurring only 0.86% performance overhead" over 35 million GPU hours. | Correct. |
 | AWS found its own health agent slowed training jobs | AWS EKS team, The New Stack (sponsored) | A customer running NCCL training "found that NMA itself was causing periodic slowdowns." | Correct. |
+| A correlated false positive can flag every node at once | AWS EKS team, The New Stack (sponsored) | After a driver update changed a health bitfield's healthy value, "every GPU node was flagged unhealthy at once. The safety breaker held (by design)." | Correct. Used to justify the correlation guard. |
 | A 20% fleet cap on repairs | AWS EKS docs and AWS containers blog | "Karpenter will not terminate more than one-fifth of a NodePool at once." Auto repair is disabled by default when "More than 20% of the nodes in the NodePool are unhealthy." | Correct. Now cited to AWS directly. |
 
 Three quotes I added because they support the design directly:
