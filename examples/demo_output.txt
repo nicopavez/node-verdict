@@ -1,4 +1,4 @@
-Node Verdict 0.1.0: 32-node pool, 4 spares, 3 jobs
+Node Verdict 0.2.0: 32-node pool, 4 spares, 3 jobs
 Timing is real (ByteDance sample traces). Node history and anomaly events are synthetic.
 
 1. Verdicts

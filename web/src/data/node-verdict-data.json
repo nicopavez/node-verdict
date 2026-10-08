@@ -1,6 +1,6 @@
 {
  "meta": {
-  "version": "0.1.0",
+  "version": "0.2.0",
   "apiVersion": "nodeverdict.dev/v1alpha1",
   "asOf": "2026-10-06T00:00:00Z",
   "poolSize": 32,

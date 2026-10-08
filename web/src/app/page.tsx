@@ -153,7 +153,7 @@ function Hero() {
             <div className="mt-2 flex items-baseline gap-2">
               <span className="text-3xl font-semibold">{t.after}</span>
               <span className="text-sm text-muted">
-                vs <span className="line-through decoration-1">{t.before}</span> naive
+                vs {t.before} naive
               </span>
             </div>
             <div className="mt-1 text-xs text-muted">peer-aware detector: {t.peer}</div>
