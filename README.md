@@ -16,20 +16,23 @@ From the outside, all three look the same. The expensive mistake goes both ways.
 
 Some numbers from published work:
 
-- In ByteDance's study of 3,079 training jobs, 42.5% of jobs straggled and 10.4% of GPU hours were wasted. Worker problems explained most of the slowdown in only 1.7% of straggling jobs. Those jobs ran 3.04x slower, against 1.28x on average. Most causes were in the job itself, such as uneven pipeline stages and uneven sequence lengths. [Source 4]
-- Meta built a lemon-node detector that was right more than 85% of the time. Large-job failures (512 GPUs and up) dropped from 14% to 4%. [Source 3]
-- Silent data corruption evades standard checks. ByteDance reports that synthetic benchmarks miss over 60% of defective GPUs. [Source 5]
+- In ByteDance's study of 3,079 training jobs on 128 GPUs or more, 42.5% of jobs ran at least 10% slower because of stragglers, and 10.4% of all allocated GPU hours were wasted. Worker problems explained more than half of the slowdown in only 1.7% of straggling jobs, and that is after the cluster's health checks. When a worker was the cause, it was severe: 3.04x slower, against 1.28x on average. Most causes were in the job itself, such as uneven pipeline stages and uneven sequence lengths. [Source 2]
+- Meta built a lemon-node detector with more than 85% accuracy. Large-job failures (512 GPUs and up) dropped from 14% to 4%. Their conclusion: "Historic data is necessary to find defective nodes." [Source 1]
+- Silent data corruption evades standard checks. ByteDance reports that synthetic benchmarks miss over 60% of defective GPUs. [Source 3]
+- AWS does not auto-repair on some node conditions because they "often indicate issues with application behavior, workload configuration, or resource limits rather than node-level failures." That is the node-or-job question. Without an answer, the default is no repair at all. [Source 4]
+
+Every number above is checked against its source in [docs/sources.md](docs/sources.md), with the quote.
 
 ## What exists today
 
-Detection is not new. This is what I found. My search was not exhaustive, and CoreWeave's preview may go further than its docs show.
+Detection is not new. This is what I found. My search was not exhaustive, and these products may do more than their public docs show.
 
 | Who | What it does | What it leaves open |
 |---|---|---|
-| CoreWeave Mission Control | Tracks node health over time and replaces degraded nodes. Straggler Detection (preview) finds the exact GPU and node falling behind. | A person still decides if the cause is the node, the network, or the training code. |
-| Crusoe AutoClusters | Replaces nodes on critical hardware failures, for workloads that opt in. | Issues below the threshold are reported as detection only. |
-| AWS EKS, NVIDIA NVSentinel | Detect and replace nodes that fail outright. | Slowness with no fault code. |
-| Research: Alibaba GREYHOUND, Guard, SysOM-AI | Detect slow GPUs and links, and compare a slow rank to a healthy one. | Published as research. I found no cloud product built on them. |
+| CoreWeave Mission Control | Tracks node health over time and replaces degraded nodes. Straggler Detection, on by default in SUNK v8 and later, names the GPU rank and node falling behind. | The operator drains and requeues. The docs do not claim to separate node, network and training-code causes. |
+| Crusoe AutoClusters | Detects hardware failures and can restart or replace the node. Remediation is off by default and turned on per issue type. | Hardware faults only. Otherwise it detects and notifies. |
+| AWS EKS, NVIDIA NVSentinel | Detect and replace or reset nodes that fail outright. | Slowness with no fault code. |
+| Research: Alibaba GREYHOUND and SysOM-AI, Guard | Detect slow GPUs and links. GREYHOUND mitigates them. SysOM-AI diagnoses root cause across layers on 80,000+ GPUs at Alibaba. | Each runs inside one operator's own fleet. None that I found joins node history across customers' jobs to a repair action. |
 
 I did not find a product that joins three things: history across customers' jobs, a node-or-job verdict, and a verdict tied to a repair action. That is the gap this project explores.
 
@@ -224,9 +227,9 @@ This does not validate the thresholds for a real fleet. The peer threshold looks
 ## Limits
 
 1. **Three traces.** I set the thresholds by hand and checked them on these three jobs only. They are not validated on held-out data. The robustness sweep shows they are not on a knife edge, not that they are right. Treat them as starting points.
-2. **History is synthetic.** The signal types follow what Meta reports (jobs that excluded a node, repair tickets, multi-node failures). The weights are illustrative. This is not Meta's model.
+2. **History is synthetic.** The signal types are a subset of what Meta reports (jobs that excluded a node, repair tickets, multi-node failures). The weights are illustrative. This is not Meta's model. Meta's lemons cause repeated job failures, while this project applies the same idea to slowdowns. Meta also found that exclusions on their own correlated weakly with failures.
 3. **The data may not carry over.** ByteDance ran a dedicated cluster with plenty of network capacity. A shared cloud may see more node problems than workload problems.
-4. **Monitoring costs something.** I did not measure overhead. AWS found its own health agent slowed training jobs. I treat under 1% as a budget (ByteDance reports 0.86% for online corruption detection). That is a target here, not a result.
+4. **Monitoring costs something.** I did not measure overhead. AWS found its own health agent caused periodic slowdowns in a customer's training job. I treat under 1% as a budget (ByteDance reports 0.86% for online corruption detection). That is a target here, not a result.
 5. **The goodput model is simple.** It uses assumed restart costs and treats a workload problem as unfixable by replacing hardware.
 6. **Not production code.** It defines behavior and thresholds. It does not operate hardware. GPU error codes and collective-communication details belong with the people who run the fleet.
 
@@ -262,17 +265,14 @@ docs/design.md     design notes
 
 ## Sources
 
-1. [The Llama 3 Herd of Models](https://arxiv.org/pdf/2407.21783) (Meta, 2024)
-2. [Efficient Training of LLMs on Distributed Infrastructures: A Survey](https://arxiv.org/pdf/2407.20018) (Alibaba failure rate)
-3. [Revisiting Reliability in Large-Scale ML Research Clusters](https://arxiv.org/pdf/2410.21680) (Meta, lemon detection)
-4. [Understanding Stragglers in Large Model Training Using What-if Analysis](https://www.usenix.org/system/files/osdi25-lin-jinkun.pdf) (ByteDance, OSDI 2025), and its [artifact](https://github.com/ByteDance-Seed/StragglerAnalysis)
-5. [SDCs in the Wild](https://www.usenix.org/conference/osdi26/presentation/zheng) and [AEGIS online SDC detection](https://www.usenix.org/conference/osdi26/presentation/lei) (ByteDance, OSDI 2026)
-6. [Self-healing GPU nodes in Kubernetes](https://thenewstack.io/self-healing-gpu-nodes/) (AWS EKS team, sponsored article)
-7. [NVSentinel overview](https://docs.nvidia.com/nvsentinel) (NVIDIA)
-8. [ClusterMAX 2.0 review: Together](https://clustermax.semianalysis.com/cloudreview/together) (SemiAnalysis)
-9. [Crusoe AutoClusters](https://docs.crusoecloud.com/orchestration/cmk/autoclusters) and [Active Health Checks](https://docs.crusoecloud.com/orchestration/cmk/active-stress-testing) (Crusoe docs)
-10. [CoreWeave Mission Control](https://coreweave.com/mission-control) and [GPU Straggler Detection](https://docs.coreweave.com/products/sunk/manage_sunk/straggler-detection) (CoreWeave docs)
-11. [GREYHOUND](https://www.usenix.org/conference/atc25/presentation/wu-tianyuan) (Alibaba and HKUST, ATC 2025), [Guard](https://mlsys.org/virtual/2026/poster/3608) (MLSys 2026), [SysOM-AI](https://arxiv.org/pdf/2603.29235) (arXiv, 2026)
+1. [Revisiting Reliability in Large-Scale ML Research Clusters](https://arxiv.org/pdf/2410.21680) (Meta, lemon detection)
+2. [Understanding Stragglers in Large Model Training Using What-if Analysis](https://www.usenix.org/system/files/osdi25-lin-jinkun.pdf) (ByteDance, OSDI 2025), and its [artifact](https://github.com/ByteDance-Seed/StragglerAnalysis)
+3. [SDCs in the Wild](https://www.usenix.org/conference/osdi26/presentation/zheng) and [AEGIS online SDC detection](https://www.usenix.org/conference/osdi26/presentation/lei) (ByteDance, OSDI 2026)
+4. [EKS node health](https://docs.aws.amazon.com/eks/latest/userguide/node-health.html), [EKS node repair](https://docs.aws.amazon.com/eks/latest/userguide/node-repair.html), [How EKS Auto Mode detects and repairs node failures](https://aws.amazon.com/blogs/containers/under-the-hood-how-amazon-eks-auto-mode-detects-repairs-and-diagnoses-node-failures/) (AWS), and [Self-healing GPU nodes in Kubernetes](https://thenewstack.io/self-healing-gpu-nodes/) (AWS EKS team, sponsored article)
+5. [NVSentinel overview](https://docs.nvidia.com/nvsentinel) (NVIDIA)
+6. [Crusoe AutoClusters](https://docs.crusoecloud.com/orchestration/cmk/autoclusters) and [Active Health Checks](https://docs.crusoecloud.com/orchestration/cmk/active-stress-testing) (Crusoe docs)
+7. [CoreWeave Mission Control](https://coreweave.com/mission-control) and [GPU Straggler Detection](https://docs.coreweave.com/products/sunk/manage_sunk/straggler-detection) (CoreWeave docs)
+8. [GREYHOUND](https://www.usenix.org/conference/atc25/presentation/wu-tianyuan) (Alibaba and HKUST, ATC 2025), [Guard](https://mlsys.org/virtual/2026/poster/3608) (MLSys 2026), [SysOM-AI](https://arxiv.org/pdf/2603.29235) (Alibaba, arXiv 2026)
 
 ## License
 
