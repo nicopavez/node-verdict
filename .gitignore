@@ -13,3 +13,4 @@ walkthrough_audio.*
 .env
 .DS_Store
 HANDOFF.md
+node_modules/

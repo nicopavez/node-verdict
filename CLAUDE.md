@@ -15,6 +15,8 @@ python -m node_verdict demo
 python -m node_verdict verdicts            # add --json, or --no-history
 python -m node_verdict simulate --sensitivity
 python -m node_verdict robustness         # threshold sweep
+python scripts/export_json.py             # regenerate web/src/data after any engine change
+cd web && npm ci && npm run dev           # the web demo (Next.js, static export)
 
 # Rebuild data/derived/ from ByteDance's artifact (needs pyarrow)
 git clone https://github.com/ByteDance-Seed/StragglerAnalysis <somewhere>
@@ -36,6 +38,7 @@ Evidence goes in, a verdict comes out, policy turns the verdict into an action.
 - `scenario.py`: the 32-node demo. Real timing, synthetic node history.
 - `robustness.py`: sweeps each threshold and reports where verdicts change.
 - `simulator.py`: compares naive, naive+checkpoint, peer-aware, and attributed repair.
+- `export.py`: writes everything the web demo shows to one JSON file. `web/` renders it and decides nothing. `tests/test_export.py` fails if the committed JSON drifts.
 
 Things that are easy to get wrong:
 
