@@ -1,5 +1,12 @@
 from node_verdict.scenario import build_scenario
-from node_verdict.simulator import SimParams, compare, sensitivity, simulate_attributed, simulate_naive
+from node_verdict.simulator import (
+    SimParams,
+    compare,
+    sensitivity,
+    simulate_attributed,
+    simulate_naive,
+    simulate_peer_aware,
+)
 
 
 def test_attributed_replaces_no_healthy_node(scenario):
@@ -23,7 +30,7 @@ def test_attributed_leaves_spares_in_the_pool(scenario):
 
 
 def test_waiting_for_a_checkpoint_explains_most_of_the_goodput_gain(scenario):
-    naive, naive_ckpt, attributed = compare(scenario)
+    naive, naive_ckpt, _, attributed = compare(scenario)
     total = attributed.goodput - naive.goodput
     from_attribution = attributed.goodput - naive_ckpt.goodput
     assert total > 0
@@ -39,7 +46,7 @@ def test_counts_do_not_depend_on_assumed_parameters(scenario):
 
 def test_sensitivity_gain_grows_with_checkpoint_interval(scenario):
     rows = sensitivity(scenario)
-    totals = [t for _, t, _ in rows]
+    totals = [t for _, t, _, _ in rows]
     assert totals == sorted(totals)
 
 
@@ -64,3 +71,32 @@ def test_missing_data_gives_a_clear_error(monkeypatch, tmp_path):
     monkeypatch.setenv("NODE_VERDICT_DATA", str(tmp_path))
     with pytest.raises(FileNotFoundError, match="NODE_VERDICT_DATA"):
         build_scenario()
+
+
+def test_peer_aware_baseline_already_avoids_healthy_replacements(scenario):
+    # The fair baseline. Comparing to stage peers alone fixes most of what naive gets wrong.
+    r = simulate_peer_aware(scenario)
+    assert r.replaced == ["N00"] and r.healthy_replaced == []
+    assert r.spares_used == 1 and r.flagged_unserved == 0
+
+
+def test_what_attribution_adds_beyond_peer_aware(scenario):
+    peer = simulate_peer_aware(scenario)
+    attributed = simulate_attributed(scenario)
+    assert not peer.sdc_pulled and attributed.sdc_pulled  # the chip needs history
+    assert peer.jobs_right_owner == ["job-a"]  # it says nothing about the two workload jobs
+    assert attributed.jobs_right_owner == ["job-a", "job-b", "job-c"]
+    assert attributed.spares_used == peer.spares_used + 1  # the extra spare goes to the chip
+
+
+def test_attribution_does_not_beat_peer_aware_on_goodput(scenario):
+    # Pulling the chip costs a restart, and the goodput model does not price corrupted training.
+    # Say so plainly instead of hiding it.
+    _, _, peer, attributed = compare(scenario)
+    assert attributed.goodput <= peer.goodput
+
+
+def test_naive_names_the_node_as_owner_of_every_slow_job(scenario):
+    r = simulate_naive(scenario)
+    assert set(r.owner_by_job.values()) == {"node"}
+    assert r.jobs_right_owner == ["job-a"]

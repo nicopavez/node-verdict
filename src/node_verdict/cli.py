@@ -61,14 +61,20 @@ def cmd_demo(args) -> None:
     print("\n2. Actions\n")
     print(action_table(actions))
 
-    print("\n3. Naive replace-any-slow-node vs attributed repair\n")
+    print("\n3. Four repair policies on the same pool\n")
+    print("naive: replace any rank slower than the job median, mid-run.")
+    print("naive+checkpoint: the same, but wait for a checkpoint. Any policy can do this.")
+    print("peer-aware: replace a rank persistently slow against its stage peers, at a checkpoint. The fair baseline.")
+    print("attributed: verdict engine plus policy.\n")
     print(comparison_table(compare(scenario, SimParams(ckpt_interval_steps=args.ckpt, restart_steps=args.restart)), scenario))
-    print(f"\nAssumed, not measured: repair acts after 20% of the run, checkpoint every {args.ckpt} steps, "
-          f"restart costs {args.restart} steps.")
+    print("\nThe counts do not depend on any assumption. Goodput does: repair acts after 20% of the run, "
+          f"checkpoint every {args.ckpt} steps, restart costs {args.restart} steps.")
 
-    print("\n4. How much of the goodput gain is attribution, and how much is just waiting for a checkpoint\n")
+    print("\n4. Where the goodput gain comes from, in percentage points\n")
     print(sensitivity_table(sensitivity(scenario, restart_steps=args.restart)))
-    print("\nThe counts (healthy nodes replaced, spares used, chip pulled) do not depend on these assumptions.")
+    print("\nNearly all of it is checkpoint timing and comparing to stage peers. Attribution adds the chip, "
+          "an owner for every slow job, and no replacement on one job of evidence. Pulling the chip costs a "
+          "restart, and this model does not price corrupted training, so attribution scores slightly below peer-aware.")
 
 
 def main(argv: list[str] | None = None) -> int:

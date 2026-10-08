@@ -29,29 +29,34 @@ job-c  N29   InformCustomer       planned  No node change. Tell the customer the
 job-c  N30   InformCustomer       planned  No node change. Tell the customer the slowdown is in the job setup.
 job-c  N31   InformCustomer       planned  No node change. Tell the customer the slowdown is in the job setup.
 
-3. Naive replace-any-slow-node vs attributed repair
+3. Four repair policies on the same pool
 
-metric                        naive  naive+checkpoint  attributed
-----------------------------  -----  ----------------  ----------
-Goodput (node-weighted)       73.2%  78.0%             78.2%
-  job-a                       75.6%  81.7%             81.7%
-  job-b                       80.0%  84.0%             84.8%
-  job-c                       61.4%  64.4%             64.4%
-Healthy nodes replaced        3      3                 0
-Bad node fixed                yes    yes               yes
-Corrupting chip pulled        no     no                yes
-Spares used (of 4)            4      4                 2
-Flagged nodes left unserved   3      3                 0
-Jobs told it is not the node  0      0                 2
+naive: replace any rank slower than the job median, mid-run.
+naive+checkpoint: the same, but wait for a checkpoint. Any policy can do this.
+peer-aware: replace a rank persistently slow against its stage peers, at a checkpoint. The fair baseline.
+attributed: verdict engine plus policy.
 
-Assumed, not measured: repair acts after 20% of the run, checkpoint every 100 steps, restart costs 10 steps.
+metric                                  naive  naive+checkpoint  peer-aware  attributed
+--------------------------------------  -----  ----------------  ----------  ----------
+Healthy nodes replaced                  3      3                 0           0
+Spares used (of 4)                      4      4                 1           2
+Flagged nodes left unserved             3      3                 0           0
+Bad node fixed                          yes    yes               yes         yes
+Corrupting chip pulled                  no     no                no          yes
+Slow jobs given the right owner (of 3)  1      1                 1           3
+Goodput, node-weighted (assumed model)  73.2%  78.0%             78.3%       78.2%
+  job-a                                 75.6%  81.7%             81.7%       81.7%
+  job-b                                 80.0%  84.0%             84.8%       84.8%
+  job-c                                 61.4%  64.4%             65.0%       64.4%
 
-4. How much of the goodput gain is attribution, and how much is just waiting for a checkpoint
+The counts do not depend on any assumption. Goodput does: repair acts after 20% of the run, checkpoint every 100 steps, restart costs 10 steps.
 
-checkpoint interval  total gain vs naive  from attribution alone
--------------------  -------------------  ----------------------
-every 50 steps       +2.7 pts             +0.2 pts
-every 100 steps      +5.0 pts             +0.2 pts
-every 200 steps      +9.2 pts             +0.2 pts
+4. Where the goodput gain comes from, in percentage points
 
-The counts (healthy nodes replaced, spares used, chip pulled) do not depend on these assumptions.
+checkpoint interval  vs naive  vs naive+checkpoint  vs peer-aware
+-------------------  --------  -------------------  -------------
+every 50 steps       +2.7 pts  +0.2 pts             -0.2 pts
+every 100 steps      +5.0 pts  +0.2 pts             -0.2 pts
+every 200 steps      +9.2 pts  +0.2 pts             -0.2 pts
+
+Nearly all of it is checkpoint timing and comparing to stage peers. Attribution adds the chip, an owner for every slow job, and no replacement on one job of evidence. Pulling the chip costs a restart, and this model does not price corrupted training, so attribution scores slightly below peer-aware.

@@ -1,7 +1,12 @@
-"""Compare two repair policies on the demo pool.
+"""Compare repair policies on the demo pool.
 
 Naive: flag any rank that runs slower than the job's median rank, replace the
 worst first until the spares run out. It cannot see silent data corruption.
+
+Peer-aware: the fair baseline. Flag a rank that is persistently slow against
+its stage peers (the same timing test the engine uses) and replace it at a
+checkpoint. No node history, no corruption signal, no owner for the job. This
+is roughly what a good straggler detector wired to auto-repair would do.
 
 Attributed: run the verdict engine, then the policy. Only node verdicts change
 nodes, and they change them at a checkpoint boundary.
@@ -15,7 +20,8 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 
-from .attribution import AttributionConfig
+from .attribution import AttributionConfig, is_timing_outlier
+from .conditions import ReasonCode
 from .engine import run_engine
 from .policy import NODE_CHANGING, QUARANTINE, REPLACE, PolicyConfig, plan
 from .scenario import Scenario
@@ -41,6 +47,9 @@ class PolicyResult:
     spares_used: int = 0
     flagged_unserved: int = 0
     jobs_told_not_node: list[str] = field(default_factory=list)
+    # Who the policy says owns each job's slowdown: "node", "job", or "none" (no answer).
+    owner_by_job: dict[str, str] = field(default_factory=dict)
+    jobs_right_owner: list[str] = field(default_factory=list)
     goodput_by_job: dict[str, float] = field(default_factory=dict)
     goodput: float = 0.0
 
@@ -102,23 +111,52 @@ def _finish(result: PolicyResult, scenario: Scenario, params: SimParams, changed
     result.bad_node_fixed = any(scenario.truth.get(n) == "bad_node" for n in result.replaced + result.quarantined)
     result.sdc_pulled = any(scenario.truth.get(n) == "sdc" for n in result.replaced + result.quarantined)
     result.spares_used = len(result.replaced) + len(result.quarantined)
+    for job in scenario.jobs:
+        truth = "node" if job.cause == "node" else "job"
+        if result.owner_by_job.get(job.id, "none") == truth:
+            result.jobs_right_owner.append(job.id)
     return result
 
 
-def simulate_naive(scenario: Scenario, params: SimParams = SimParams(), at_checkpoint: bool = False) -> PolicyResult:
-    """Replace any slow rank. With at_checkpoint, it waits for a checkpoint like the attributed policy."""
-    result = PolicyResult("naive+checkpoint" if at_checkpoint else "naive")
-    flags = _naive_flags(scenario, params.naive_threshold)
+def _replace_worst_first(result: PolicyResult, scenario: Scenario, flags: list[tuple[float, str, str]]) -> dict[str, list[str]]:
+    """Spend spares on flags in order. A flag is a claim that the node is the problem."""
     changed: dict[str, list[str]] = {}
     spares = scenario.spares
     for _, job_id, node in flags:
+        result.owner_by_job[job_id] = "node"
         if spares > 0:
             spares -= 1
             result.replaced.append(node)
             changed.setdefault(job_id, []).append(node)
         else:
             result.flagged_unserved += 1
+    return changed
+
+
+def simulate_naive(scenario: Scenario, params: SimParams = SimParams(), at_checkpoint: bool = False) -> PolicyResult:
+    """Replace any slow rank. With at_checkpoint, it waits for a checkpoint like the attributed policy."""
+    result = PolicyResult("naive+checkpoint" if at_checkpoint else "naive")
+    changed = _replace_worst_first(result, scenario, _naive_flags(scenario, params.naive_threshold))
     return _finish(result, scenario, params, changed, at_ckpt=at_checkpoint)
+
+
+def _peer_flags(scenario: Scenario, cfg: AttributionConfig) -> list[tuple[float, str, str]]:
+    """(peer ratio, job id, node) for every rank persistently slow against its stage peers, worst first."""
+    flags = []
+    for job in scenario.jobs:
+        for rank, sig in job.signals.ranks.items():
+            if is_timing_outlier(sig, cfg):
+                flags.append((sig.rel_median, job.id, job.node_of_rank[rank]))
+    return sorted(flags, reverse=True)
+
+
+def simulate_peer_aware(
+    scenario: Scenario, params: SimParams = SimParams(), cfg: AttributionConfig = AttributionConfig()
+) -> PolicyResult:
+    """The fair baseline: stage-peer timing only, replace at a checkpoint. No history, no guards."""
+    result = PolicyResult("peer-aware")
+    changed = _replace_worst_first(result, scenario, _peer_flags(scenario, cfg))
+    return _finish(result, scenario, params, changed, at_ckpt=True)
 
 
 def simulate_attributed(
@@ -131,6 +169,11 @@ def simulate_attributed(
     conditions = run_engine(scenario, cfg)
     sizes = {j.id: len(j.nodes) for j in scenario.jobs}
     actions = plan(conditions, len(scenario.pool), scenario.spares, sizes, policy_cfg)
+    for c in conditions:
+        if c.reason in (ReasonCode.NODE_LEMON, ReasonCode.NODE_SUSPECT):
+            result.owner_by_job[c.job] = "node"  # a timing claim against a node
+        elif c.reason == ReasonCode.WORKLOAD_IMBALANCE:
+            result.owner_by_job.setdefault(c.job, "job")
     changed: dict[str, list[str]] = {}
     for a in actions:
         if a.kind in NODE_CHANGING and a.status == "planned":
@@ -144,28 +187,37 @@ def simulate_attributed(
 
 
 def compare(scenario: Scenario, params: SimParams = SimParams()) -> list[PolicyResult]:
-    """Three policies. The middle one separates timing from attribution.
+    """Four policies. The middle two are controls, so attribution gets no credit it did not earn.
 
     naive: replace any slow rank, mid-run.
     naive+checkpoint: the same flags, but wait for a checkpoint. Any policy can do this.
+    peer-aware: compare to stage peers and wait for a checkpoint. A good detector can do this.
     attributed: verdict engine plus policy. Also waits for a checkpoint.
     """
     return [
         simulate_naive(scenario, params),
         simulate_naive(scenario, params, at_checkpoint=True),
+        simulate_peer_aware(scenario, params),
         simulate_attributed(scenario, params),
     ]
 
 
-def sensitivity(scenario: Scenario, ckpts=(50, 100, 200), restart_steps: int = 10) -> list[tuple[int, float, float]]:
-    """(checkpoint interval, total gain, gain from attribution alone), in percentage points.
+def sensitivity(
+    scenario: Scenario, ckpts=(50, 100, 200), restart_steps: int = 10
+) -> list[tuple[int, float, float, float]]:
+    """Goodput gain of attributed repair in percentage points, per checkpoint interval.
 
-    Total is attributed vs naive. Attribution alone is attributed vs naive+checkpoint.
+    Returns (interval, vs naive, vs naive+checkpoint, vs peer-aware).
     """
     rows = []
     for c in ckpts:
-        naive, naive_ckpt, attributed = compare(
+        naive, naive_ckpt, peer, attributed = compare(
             scenario, SimParams(ckpt_interval_steps=c, restart_steps=restart_steps)
         )
-        rows.append((c, 100 * (attributed.goodput - naive.goodput), 100 * (attributed.goodput - naive_ckpt.goodput)))
+        rows.append((
+            c,
+            100 * (attributed.goodput - naive.goodput),
+            100 * (attributed.goodput - naive_ckpt.goodput),
+            100 * (attributed.goodput - peer.goodput),
+        ))
     return rows

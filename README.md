@@ -150,42 +150,44 @@ Two guards sit on top. A fleet cap never changes more than 20% of the pool at on
 
 ## What the simulator shows
 
-It compares three policies on the demo pool. The middle one is a control that I added so I would not fool myself.
+It compares four policies on the demo pool. The middle two are controls I added so attribution gets no credit it did not earn.
 
 - **naive:** flag any rank slower than the job's median rank, replace the worst first, mid-run.
 - **naive+checkpoint:** the same flags, but wait for a checkpoint. Any policy can do this.
+- **peer-aware:** flag a rank that is persistently slow against its stage peers, replace it at a checkpoint. No history, no corruption signal. This is the fair baseline: roughly what a good straggler detector wired to auto-repair would do.
 - **attributed:** the verdict engine plus policy. Also waits for a checkpoint.
 
 ```
-metric                        naive  naive+checkpoint  attributed
-----------------------------  -----  ----------------  ----------
-Goodput (node-weighted)       73.2%  78.0%             78.2%
-  job-a                       75.6%  81.7%             81.7%
-  job-b                       80.0%  84.0%             84.8%
-  job-c                       61.4%  64.4%             64.4%
-Healthy nodes replaced        3      3                 0
-Bad node fixed                yes    yes               yes
-Corrupting chip pulled        no     no                yes
-Spares used (of 4)            4      4                 2
-Flagged nodes left unserved   3      3                 0
-Jobs told it is not the node  0      0                 2
+metric                                  naive  naive+checkpoint  peer-aware  attributed
+--------------------------------------  -----  ----------------  ----------  ----------
+Healthy nodes replaced                  3      3                 0           0
+Spares used (of 4)                      4      4                 1           2
+Flagged nodes left unserved             3      3                 0           0
+Bad node fixed                          yes    yes               yes         yes
+Corrupting chip pulled                  no     no                no          yes
+Slow jobs given the right owner (of 3)  1      1                 1           3
+Goodput, node-weighted (assumed model)  73.2%  78.0%             78.3%       78.2%
+  job-a                                 75.6%  81.7%             81.7%       81.7%
+  job-b                                 80.0%  84.0%             84.8%       84.8%
+  job-c                                 61.4%  64.4%             65.0%       64.4%
 ```
 
-Goodput here is the ideal run time divided by the actual run time. Per-job slowdowns come from ByteDance's published what-if analysis. Three inputs are my assumptions, not measurements: repair acts after 20% of the run, the checkpoint interval, and the cost of a restart.
+The counts above the goodput line do not depend on any assumption. Goodput is the ideal run time divided by the actual run time. Per-job slowdowns come from ByteDance's published what-if analysis. Three inputs are my assumptions, not measurements: repair acts after 20% of the run, the checkpoint interval, and the cost of a restart.
 
 ```
-checkpoint interval  total gain vs naive  from attribution alone
--------------------  -------------------  ----------------------
-every 50 steps       +2.7 pts             +0.2 pts
-every 100 steps      +5.0 pts             +0.2 pts
-every 200 steps      +9.2 pts             +0.2 pts
+checkpoint interval  vs naive  vs naive+checkpoint  vs peer-aware
+-------------------  --------  -------------------  -------------
+every 50 steps       +2.7 pts  +0.2 pts             -0.2 pts
+every 100 steps      +5.0 pts  +0.2 pts             -0.2 pts
+every 200 steps      +9.2 pts  +0.2 pts             -0.2 pts
 ```
 
 **What I take from this:**
 
-- Almost all of the goodput gain comes from waiting for a checkpoint, which any policy can do. Attribution alone adds about 0.2 points.
-- The real difference is elsewhere, and it does not depend on my assumptions. Naive repair replaces 3 healthy nodes, uses all 4 spares, leaves 3 flagged nodes with no spare, and never pulls the corrupting chip. Attributed repair replaces none, uses 2 spares, and pulls the chip.
-- In a supply-limited cloud, spares are the constraint. That is the case for attribution. A goodput headline is not.
+- Almost all of the goodput gain comes from two things any good system can do: wait for a checkpoint, and compare a rank to its stage peers. Attribution adds nothing to goodput on top of that. It scores 0.2 points below peer-aware, because pulling the chip costs a restart and this model does not price corrupted training.
+- Peer-aware detection already stops the waste of healthy nodes. The naive policy is a straw man and I do not lead with it.
+- What attribution adds over a good detector does not depend on my assumptions. It pulls the corrupting chip, which timing alone cannot see. It gives every slow job an owner (3 of 3, against 1 of 3), so the two customers whose jobs are the problem are told so. And it will not replace a node on one job of evidence (see the no-history run, where N00 drops to `Watch`).
+- In a supply-limited cloud, spares are the constraint. Attribution spends one more spare than peer-aware, on purpose, to pull a chip that would otherwise keep corrupting training runs.
 
 ## Data: real and synthetic
 
