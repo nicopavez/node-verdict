@@ -36,6 +36,10 @@ Rules run in a fixed order and the first match wins for a node.
 
 The 1.15 threshold applies to both the peer comparison and the stage comparison. Defaults live in `AttributionConfig`.
 
+### Robustness
+
+`robustness.py` sweeps each threshold on its own and reports the band where every verdict matches the default run. The stage threshold is the narrow one: 1.06 to 1.20. Below that band a healthy stage gets a workload verdict. Above it a slow stage goes unexplained. Neither side changes a node, and no setting on any grid replaces or pulls a healthy node. This is a check against overfitting the demo, not a validation on held-out data.
+
 ### Why stage peers
 
 Pipeline stages do different amounts of work. In the ST trace, stage 3 runs about 1.6x longer than the others on every replica. Compare each rank to the whole job and you flag both stage 3 nodes. Compare to stage peers and neither is an outlier, which is correct: the stage is slow, not the nodes.
